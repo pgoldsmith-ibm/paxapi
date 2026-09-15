@@ -879,7 +879,7 @@ Members | A flat, alias-resolved collection of every member caption in the selec
 
 ### Errors
 
-A runtime error is raised for most invalid inputs. See the `On Error` pattern in [Necessary IBM Cognos automation API references](#necessary-ibm-cognos-automation-api-references) for the recommended catch pattern.
+A runtime error is raised for most invalid inputs. Use an `On Error GoTo` handler to catch errors; call `CognosOfficeAutomationObject.TraceError` inside the handler to log details.
 
 Case | Result
 -----|-------

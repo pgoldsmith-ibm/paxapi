@@ -4,34 +4,6 @@ Universal Report functions can be used to create and interact with Universal Rep
 
 The Universal Report manager functions that are exposed through the IBM® Cognos® automation objects are:
 
-## Error handling
-
-Most Universal Report methods raise a VBA runtime error when they receive an invalid argument or encounter a server-side error. Use a standard `On Error GoTo Handler:` block to catch these errors. Inside the handler you can call `TraceError` to write details to the Planning Analytics for Microsoft Excel log file.
-
-> Example — catching a Universal Report runtime error
-
-```vb
-Public Sub SafeCreateUR()
-    On Error GoTo Handler:
-    Dim oReport As Object
-    Set oReport = Reporting.UniversalReports.Create( _
-        "http://myserver.ibm.com", "Planning Sample", "plan_BudgetPlan", "Goal Input")
-    Exit Sub
-Handler:
-    CognosOfficeAutomationObject.TraceError "UniversalReports.Create failed: " & Err.Description
-    '<Place additional error handling here. You may not want to display a message box
-    ' if you are running in a scheduled task.>
-End Sub
-```
-
-The following methods are exceptions to the runtime-error rule:
-
-- **`GetCellAddressFromMUN`** — returns an empty string when the MUN is not found or the report has not been refreshed. No error is raised; always check the return value before using it.
-- **`Commit` when the report is in a bad state** — no error is raised and no feedback is returned. If the sheet contains invalid values, the report silently restores those cells to their correct state (as of the last refresh) rather than writing them to the server.
-- **`RebuildBook` / `RebuildSheet` when a report is in a bad state** — no error is raised and no feedback is returned.
-
-For details on logging errors, see `TraceError` and `TraceLog` in the Global API functions.
-
 ## Create
 
 > Example
@@ -66,7 +38,7 @@ Data type: UniversalReport object
 
 ### Errors
 
-If any argument is invalid, a runtime error is raised. See [Error handling](#error-handling) for the recommended catch pattern.
+If any argument is invalid, a runtime error is raised. Use an `On Error GoTo` handler to catch errors; call `CognosOfficeAutomationObject.TraceError` inside the handler to log details.
 
 Case | Result
 -----|-------
@@ -109,7 +81,7 @@ Data type: UniversalReport object
 
 ### Errors
 
-If any argument is invalid, a runtime error is raised. See [Error handling](#error-handling) for the recommended catch pattern.
+If any argument is invalid, a runtime error is raised. Use an `On Error GoTo` handler to catch errors; call `CognosOfficeAutomationObject.TraceError` inside the handler to log details.
 
 Case | Result
 -----|-------
@@ -163,7 +135,7 @@ Data type: UniversalReport object
 
 ### Errors
 
-If any argument is invalid, a runtime error is raised. See [Error handling](#error-handling) for the recommended catch pattern.
+If any argument is invalid, a runtime error is raised. Use an `On Error GoTo` handler to catch errors; call `CognosOfficeAutomationObject.TraceError` inside the handler to log details.
 
 Case | Result
 -----|-------
@@ -216,7 +188,7 @@ Data type: UniversalReport object
 
 ### Errors
 
-If any argument is invalid, a runtime error is raised. See [Error handling](#error-handling) for the recommended catch pattern.
+If any argument is invalid, a runtime error is raised. Use an `On Error GoTo` handler to catch errors; call `CognosOfficeAutomationObject.TraceError` inside the handler to log details.
 
 Case | Result
 -----|-------
@@ -230,15 +202,17 @@ Bad MDX statement | Runtime error `-2147024809`: *Unreducible state* (MDX parse 
 
 ```vb
 Public Sub GetUR()
+    On Error GoTo Handler:
     Dim oReport As Object
     Set oReport = Reporting.UniversalReports.Get("0", ThisWorkbook.Name, ActiveSheet.Name)
-    If Not oReport Is Nothing Then
-        MsgBox "Found report on cube: " & oReport.Cube
-    End If
+    MsgBox "Found report on cube: " & oReport.Cube
+    Exit Sub
+Handler:
+    CognosOfficeAutomationObject.TraceError "UniversalReports.Get failed: " & Err.Description
 End Sub
 ```
 
-Get retrieves an existing Universal Report object from a specified workbook and sheet by its report ID. Returns `Nothing` if no report with the given ID is found.
+Get retrieves an existing Universal Report object from a specified workbook and sheet by its report ID. A runtime error is raised if any argument is invalid or the report cannot be found.
 
 ### Syntax
 
@@ -256,17 +230,17 @@ sheet name | The name of the worksheet that contains the Universal Report. | Str
 
 ### Return value
 
-Data type: UniversalReport object, or `Nothing` if not found.
+Data type: UniversalReport object.
 
 ### Errors
 
-A runtime error is raised if the book or sheet cannot be resolved. See [Error handling](#error-handling) for the recommended catch pattern.
+A runtime error is raised for all invalid inputs. Use an `On Error GoTo` handler to catch errors; call `CognosOfficeAutomationObject.TraceError` inside the handler to log details.
 
 Case | Result
 -----|-------
-Bad report ID | Runtime error `91`: *Object variable or With block variable not set*
-Bad book name | Runtime error `-2147352565`: *Invalid index. [Exception from HRESULT: 0x80020008 (DISP_E_BADINDEX)]*
-Bad sheet name | Runtime error `91`: *Object variable or With block variable not set*
+Bad book name | Runtime error `-2147024809`: *No open workbook named \<name\>.*
+Bad sheet name | Runtime error `-2147024809`: *No sheet named \<name\> in workbook \<book\>.*
+Bad report ID | Runtime error `-2147024809`: *No Universal Report with ID '\<id\>' found on sheet '\<sheet\>' in workbook '\<book\>'.*
 
 ## GetReportsFromSheet
 
@@ -283,7 +257,7 @@ Public Sub ListSheetReports()
 End Sub
 ```
 
-GetReportsFromSheet returns a collection of all Universal Report objects found on the specified sheet.
+GetReportsFromSheet returns a collection of all Universal Report objects found on the specified sheet. Returns an empty collection (not an error) if the sheet exists but contains no Universal Reports.
 
 ### Syntax
 
@@ -302,7 +276,7 @@ Data type: Collection of UniversalReport objects.
 
 ### Errors
 
-A runtime error is raised if the book or sheet cannot be resolved. See [Error handling](#error-handling) for the recommended catch pattern.
+A runtime error is raised if the book or sheet cannot be resolved. Use an `On Error GoTo` handler to catch errors; call `CognosOfficeAutomationObject.TraceError` inside the handler to log details.
 
 Case | Result
 -----|-------
@@ -342,7 +316,7 @@ Data type: Collection of UniversalReport objects.
 
 ### Errors
 
-A runtime error is raised if the book cannot be resolved. See [Error handling](#error-handling) for the recommended catch pattern.
+A runtime error is raised if the book cannot be resolved. Use an `On Error GoTo` handler to catch errors; call `CognosOfficeAutomationObject.TraceError` inside the handler to log details.
 
 Case | Result
 -----|-------
@@ -356,15 +330,17 @@ Bad book name | Runtime error `-2147024809`: *No open workbook named \<name\>.*
 
 ```vb
 Public Sub GetURProperties()
+    On Error GoTo Handler:
     Dim oReport As Object
     Set oReport = Reporting.UniversalReports.Get("0", ThisWorkbook.Name, ActiveSheet.Name)
-    If Not oReport Is Nothing Then
-        MsgBox "Book: " & oReport.Book & vbNewLine & _
-               "Sheet: " & oReport.Sheet & vbNewLine & _
-               "Id: " & oReport.Id & vbNewLine & _
-               "Cube: " & oReport.Cube & vbNewLine & _
-               "DataSource: " & oReport.DataSource
-    End If
+    MsgBox "Book: " & oReport.Book & vbNewLine & _
+           "Sheet: " & oReport.Sheet & vbNewLine & _
+           "Id: " & oReport.Id & vbNewLine & _
+           "Cube: " & oReport.Cube & vbNewLine & _
+           "DataSource: " & oReport.DataSource
+    Exit Sub
+Handler:
+    CognosOfficeAutomationObject.TraceError "UniversalReports.Get failed: " & Err.Description
 End Sub
 ```
 
@@ -402,7 +378,7 @@ The following string is the syntax for the Commit method.
 
 ### Errors
 
-If the report is in a bad state, no error is raised and no feedback is returned. If the sheet contains invalid values, the report silently restores those cells to their correct state (as of the last refresh) rather than writing the invalid values to the server.
+Commit never raises a runtime error. If the report has not been refreshed there is nothing to commit and the call is a no-op. If the sheet contains invalid values, the report silently restores those cells to their correct state (as of the last refresh) rather than writing the invalid values to the server.
 
 ## SetSlicer (Universal Report)
 
@@ -433,7 +409,7 @@ member name | The display name of the member to set as the slicer value. | Strin
 
 ### Errors
 
-A runtime error is raised if either argument is invalid. See [Error handling](#error-handling) for the recommended catch pattern.
+A runtime error is raised if either argument is invalid. Use an `On Error GoTo` handler to catch errors; call `CognosOfficeAutomationObject.TraceError` inside the handler to log details.
 
 Case | Result
 -----|-------
@@ -456,7 +432,7 @@ Public Sub FindMUNCell()
 End Sub
 ```
 
-GetCellAddressFromMUN returns the A1-style Excel cell address of the header cell whose unique member name (MUN) matches the supplied value on the specified axis. Returns an empty string if the report has not been refreshed yet or if no matching member is found.
+GetCellAddressFromMUN returns the A1-style Excel cell address of the header cell whose unique member name (MUN) matches the supplied value on the specified axis. Both member ID-based MUNs (e.g. `[Region].[Region].[North America]`) and alias-based MUNs (e.g. `[Region].[Region].[Amérique du Nord]`) are supported. Returns an empty string if the report has not been refreshed yet or if no matching member is found.
 
 ### Syntax
 
@@ -468,7 +444,7 @@ The following string is the syntax for the GetCellAddressFromMUN method.
 
 Argument | Description | Data type
 --------- | ------- | -----------
-MUN | The unique member name to locate in the report header cache. | String
+MUN | The unique member name to locate in the report header cache. Accepts both member ID-based and alias-based MUNs. | String
 isRow | `True` to search the row axis; `False` to search the column axis. | Boolean
 
 ### Return value
@@ -494,11 +470,12 @@ Public Sub InsertUserRowUR()
     Dim oReport As Object
     Set oReport = Reporting.UniversalReports.Get("0", ThisWorkbook.Name, ActiveSheet.Name)
     ' Pass the header cell of the anchor row as a Range
+    ' Pass "" for header or expression to use defaults
     oReport.InsertUserRow Range("E53"), 2, "Revenue", "[plan_chart_of_accounts].[plan_chart_of_accounts].[Revenue]"
 End Sub
 ```
 
-InsertUserRow inserts a custom user-defined row into a Dynamic Universal Report at a position relative to the row whose header cell is supplied as a Range. Optionally accepts a header label and an Excel formula expression to populate the row data cells. The report must be fully refreshed before calling this method.
+InsertUserRow inserts a custom user-defined row into a Dynamic Universal Report at a position relative to the row that contains the supplied Range. Accepts a header label and an MDX expression to populate the row data cells — pass an empty string for either to use the default (no visible header, cells display as blank). The report must be fully refreshed before calling this method.
 
 <aside class="notice">
 InsertUserRow is only supported for Dynamic Universal Reports. Calling this method on a Static Universal Report will raise an error.
@@ -514,14 +491,14 @@ The following string is the syntax for the InsertUserRow method.
 
 Argument | Description | Data type
 --------- | ------- | -----------
-range | An Excel Range whose first cell is a row header cell in the report. The anchor member is resolved from this cell using the report's header cache. | Range
+range | An Excel Range whose first cell falls within the row axis of the report. The anchor member is resolved from this cell using the report's header cache. | Range
 position | The position at which to insert the row. Accepted values: `1` (Before selection), `2` (After selection), `3` (Start of hierarchy), `4` (End of hierarchy). | Integer
-header | Optional. The header label for the new row. If omitted or empty, no header is set. | String
-expression | Optional. An Excel formula that populates the data cells in the new row. If omitted or empty, defaults to an empty string formula. | String
+header | The header label for the new row. Pass an empty string to insert the row without a visible header. | String
+expression | An MDX value expression evaluated by the TM1 server to populate each data cell in the new row. Any valid MDX value expression is accepted — for example, a member reference such as `[Measures].[Revenue]`, or a calculated expression such as `[Measures].[Revenue] / [Measures].[Units]`. Pass an empty string and the cells will display as blank. | String
 
 ### Errors
 
-A runtime error is raised for all invalid inputs. See [Error handling](#error-handling) for the recommended catch pattern.
+A runtime error is raised for all invalid inputs. Use an `On Error GoTo` handler to catch errors; call `CognosOfficeAutomationObject.TraceError` inside the handler to log details.
 
 Case | Result
 -----|-------
@@ -529,8 +506,8 @@ Range outside report bounds | Runtime error `-2147024809`: *The specified range 
 Invalid `position` value | Runtime error `-2147024809`: *Invalid position '\<value\>'. Expected 1 (before), 2 (after), 3 (start of hierarchy), or 4 (end of hierarchy).*
 Called on a Static Universal Report | Runtime error `-2146233079`: *Insert user content is only supported for Dynamic Universal Reports.*
 Report not fully refreshed | Runtime error `-2146233079`: *The Universal Report must be fully refreshed before inserting user content. Wait for the report to finish loading and try again.*
-Duplicate header (same as an existing header on the axis) | IBM Framework error dialog: *The header '\<name\>' already exists on the row axis. Each header on an axis must be unique.*
-Bad expression | IBM Framework error dialog: *The expression for the user row is invalid and could not be evaluated. The row was not added to the universal report.*
+Duplicate header (same as an existing header on the axis) | Runtime error `-2147024809`: *The header '\<name\>' already exists on the row axis. Each header on an axis must be unique.*
+Bad expression | Runtime error `-2147024809`: *The expression for the user row is invalid and could not be evaluated by the server. Verify that the expression is a valid MDX value expression and try again. The row was not added to the universal report.*
 
 ## InsertUserCol
 
@@ -541,11 +518,12 @@ Public Sub InsertUserColUR()
     Dim oReport As Object
     Set oReport = Reporting.UniversalReports.Get("0", ThisWorkbook.Name, ActiveSheet.Name)
     ' Pass the header cell of the anchor column as a Range
+    ' Pass "" for header or expression to use defaults
     oReport.InsertUserCol Range("F51"), 1, "Q2 - Q1", "[plan_time].[plan_time].[Q2-2004] - [plan_time].[plan_time].[Q1-2004]"
 End Sub
 ```
 
-InsertUserCol inserts a custom user-defined column into a Dynamic Universal Report at a position relative to the column whose header cell is supplied as a Range. Optionally accepts a header label and an Excel formula expression to populate the column data cells. The report must be fully refreshed before calling this method.
+InsertUserCol inserts a custom user-defined column into a Dynamic Universal Report at a position relative to the column that contains the supplied Range. Accepts a header label and an MDX expression to populate the column data cells — pass an empty string for either to use the default (no visible header, cells display as blank). The report must be fully refreshed before calling this method.
 
 <aside class="notice">
 InsertUserCol is only supported for Dynamic Universal Reports. Calling this method on a Static Universal Report will raise an error.
@@ -561,14 +539,14 @@ The following string is the syntax for the InsertUserCol method.
 
 Argument | Description | Data type
 --------- | ------- | -----------
-range | An Excel Range whose first cell is a column header cell in the report. The anchor member is resolved from this cell using the report's header cache. | Range
+range | An Excel Range whose first cell falls within the column axis of the report. The anchor member is resolved from this cell using the report's header cache. | Range
 position | The position at which to insert the column. Accepted values: `1` (Before selection), `2` (After selection), `3` (Start of hierarchy), `4` (End of hierarchy). | Integer
-header | Optional. The header label for the new column. If omitted or empty, no header is set. | String
-expression | Optional. An Excel formula that populates the data cells in the new column. If omitted or empty, defaults to an empty string formula. | String
+header | The header label for the new column. Pass an empty string to insert the column without a visible header. | String
+expression | An MDX value expression evaluated by the TM1 server to populate each data cell in the new column. Any valid MDX value expression is accepted — for example, a member reference such as `[Measures].[Revenue]`, or a calculated expression such as `[Measures].[Revenue] / [Measures].[Units]`. Pass an empty string and the cells will display as blank. | String
 
 ### Errors
 
-A runtime error is raised for all invalid inputs. See [Error handling](#error-handling) for the recommended catch pattern.
+A runtime error is raised for all invalid inputs. Use an `On Error GoTo` handler to catch errors; call `CognosOfficeAutomationObject.TraceError` inside the handler to log details.
 
 Case | Result
 -----|-------
@@ -576,8 +554,8 @@ Range outside report bounds | Runtime error `-2147024809`: *The specified range 
 Invalid `position` value | Runtime error `-2147024809`: *Invalid position '\<value\>'. Expected 1 (before), 2 (after), 3 (start of hierarchy), or 4 (end of hierarchy).*
 Called on a Static Universal Report | Runtime error `-2146233079`: *Insert user content is only supported for Dynamic Universal Reports.*
 Report not fully refreshed | Runtime error `-2146233079`: *The Universal Report must be fully refreshed before inserting user content. Wait for the report to finish loading and try again.*
-Duplicate header (same as an existing header on the axis) | IBM Framework error dialog: *The header '\<name\>' already exists on the column axis. Each header on an axis must be unique.*
-Bad expression | IBM Framework error dialog: *The expression for the user column is invalid and could not be evaluated. The column was not added to the universal report.*
+Duplicate header (same as an existing header on the axis) | Runtime error `-2147024809`: *The header '\<name\>' already exists on the column axis. Each header on an axis must be unique.*
+Bad expression | Runtime error `-2147024809`: *The expression for the user column is invalid and could not be evaluated by the server. Verify that the expression is a valid MDX value expression and try again. The column was not added to the universal report.*
 
 ## InsertSpacerRow
 
@@ -613,14 +591,16 @@ position | The position relative to the selected row. Accepted values: `1` (Befo
 
 ### Errors
 
-A runtime error is raised for all invalid inputs. See [Error handling](#error-handling) for the recommended catch pattern.
+A runtime error is raised for all invalid inputs. Use an `On Error GoTo` handler to catch errors; call `CognosOfficeAutomationObject.TraceError` inside the handler to log details.
 
 Case | Result
 -----|-------
+Invalid range (non-Range value passed) | Runtime error `-2147024809`: *The range argument is not a valid Excel Range. Pass a Range object — for example, a cell reference such as Range("A1").*
 Range outside report bounds | Runtime error `-2146233080`: *Index was outside the bounds of the array.*
 Invalid `position` value | Runtime error `-2147024809`: *Invalid spacer position '\<value\>'. Expected 1 (before) or 2 (after).*
 Called on a Dynamic Universal Report | Runtime error `-2146233079`: *Insert spacer is only supported for Static Universal Reports.*
 Report not fully refreshed | Runtime error `-2146233079`: *The Universal Report must be fully refreshed before inserting user content. Wait for the report to finish loading and try again.*
+Insert failure (e.g. sheet is protected or column limit reached) | Runtime error `-2146233079`: *Unable to add the spacer to the universal report.*
 
 ## InsertSpacerCol
 
@@ -656,11 +636,13 @@ position | The position relative to the selected column. Accepted values: `1` (B
 
 ### Errors
 
-A runtime error is raised for all invalid inputs. See [Error handling](#error-handling) for the recommended catch pattern.
+A runtime error is raised for all invalid inputs. Use an `On Error GoTo` handler to catch errors; call `CognosOfficeAutomationObject.TraceError` inside the handler to log details.
 
 Case | Result
 -----|-------
+Invalid range (non-Range value passed) | Runtime error `-2147024809`: *The range argument is not a valid Excel Range. Pass a Range object — for example, a cell reference such as Range("A1").*
 Range outside report bounds | Runtime error `-2146233080`: *Index was outside the bounds of the array.*
 Invalid `position` value | Runtime error `-2147024809`: *Invalid spacer position '\<value\>'. Expected 1 (before) or 2 (after).*
 Called on a Dynamic Universal Report | Runtime error `-2146233079`: *Insert spacer is only supported for Static Universal Reports.*
 Report not fully refreshed | Runtime error `-2146233079`: *The Universal Report must be fully refreshed before inserting user content. Wait for the report to finish loading and try again.*
+Insert failure (e.g. sheet is protected or column limit reached) | Runtime error `-2146233079`: *Unable to add the spacer to the universal report.*
