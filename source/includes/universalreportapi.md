@@ -422,6 +422,7 @@ Bad member name | Runtime error `-2146233832`: *'\<name\>' can not be found in c
 
 ```vb
 Public Sub FindMUNCell()
+    On Error GoTo ErrHandler
     Dim oReport As Object
     Set oReport = Reporting.UniversalReports.Get("0", ThisWorkbook.Name, ActiveSheet.Name)
     Dim addr As String
@@ -429,10 +430,13 @@ Public Sub FindMUNCell()
     If addr <> "" Then
         MsgBox "Member cell is at: " & addr
     End If
+    Exit Sub
+ErrHandler:
+    MsgBox "Error: " & Err.Description
 End Sub
 ```
 
-GetCellAddressFromMUN returns the A1-style Excel cell address of the header cell whose unique member name (MUN) matches the supplied value on the specified axis. Both member ID-based MUNs (e.g. `[Region].[Region].[North America]`) and alias-based MUNs (e.g. `[Region].[Region].[Amérique du Nord]`) are supported. Returns an empty string if the report has not been refreshed yet or if no matching member is found.
+GetCellAddressFromMUN returns the A1-style Excel cell address of the header cell whose unique member name (MUN) matches the supplied value on the specified axis. Both member ID-based MUNs (e.g. `[Region].[Region].[North America]`) and alias-based MUNs (e.g. `[Region].[Region].[Amérique du Nord]`) are supported. Returns an empty string if no matching member is found.
 
 ### Syntax
 
@@ -453,13 +457,13 @@ Data type: String. The A1-style cell address, or an empty string if not found.
 
 ### Errors
 
-`GetCellAddressFromMUN` does not raise a runtime error. Instead it returns an empty string in all failure cases. Always check the return value before using it (as shown in the example above).
+A runtime error is raised if the report has not been refreshed. Use an `On Error GoTo` handler to catch errors; call `CognosOfficeAutomationObject.TraceError` inside the handler to log details. For all other failure cases, the method returns an empty string — always check the return value before using it.
 
 Case | Result
 -----|-------
 MUN not found in report | Returns an empty string. No error is raised.
 Mismatched `isRow` boolean (searching the wrong axis) | Returns an empty string. No error is raised.
-Report not yet refreshed | Returns an empty string. No error is raised.
+Report not yet refreshed | Runtime error `-2146233079`: *The Universal Report must be fully refreshed before this operation can be performed. Wait for the report to finish loading and try again.*
 
 ## InsertUserRow
 
